@@ -24,7 +24,7 @@
     "eslint-plugin-standard": "^4.0.1",
     "express": "^4.17.1",
     "jest": "^26.0.1",
-    "mongoose": "^4.13.20",
+    "mongoose": "^5.7.5",
     "morgan": "^1.10.0",
     "nodemon": "^1.19.4",
     "supertest": "^4.0.2"
