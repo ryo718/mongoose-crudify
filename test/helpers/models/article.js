@@ -1,14 +1,15 @@
 const mongoose = require('mongoose')
 
 const articleSchema = mongoose.Schema({
-  oldId: Number,
   title: {
     type: String,
     required: true
   },
-  content: String,
-  secret: String,
-  likes: {
+  secret: {
+    type: String,
+    default: 'some secret'
+  },
+  views: {
     type: Number,
     default: 0
   }

@@ -1,9 +1,7 @@
 module.exports = function (app) {
-  let mongoose = require('./mongoose')
-  // let routes = require('./routes')(app)
+  const mongoose = require('./mongoose')
 
   return {
     mongoose
-    // routes
   }
 }

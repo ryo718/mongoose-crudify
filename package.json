@@ -1,11 +1,11 @@
 {
   "name": "mongoose-crudify",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Crudify mongoose model",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon app.js",
-    "test": "./node_modules/.bin/mocha"
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "repository": {
     "type": "git",
@@ -13,20 +13,20 @@
   },
   "author": "ryo718",
   "license": "MIT",
-  "dependencies": {
-    "lodash": "^4.17.4"
-  },
   "devDependencies": {
-    "body-parser": "^1.17.2",
-    "chai": "^3.5.0",
-    "chai-http": "^3.0.0",
-    "debug": "^2.6.8",
+    "body-parser": "^1.19.0",
     "dotenv": "^4.0.0",
-    "express": "^4.15.3",
-    "mocha": "^3.4.2",
-    "mongoose": "^4.11.0",
-    "morgan": "^1.8.2",
-    "nodemon": "^1.11.0",
-    "standard": "^8.6.0"
+    "eslint": "^7.0.0",
+    "eslint-config-standard": "^14.1.1",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1",
+    "express": "^4.17.1",
+    "jest": "^26.0.1",
+    "mongoose": "^4.13.20",
+    "morgan": "^1.10.0",
+    "nodemon": "^1.19.4",
+    "supertest": "^4.0.2"
   }
 }

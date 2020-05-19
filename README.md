@@ -16,9 +16,9 @@ var Article = require('../app/models/article')
  * By default, following routes are generated
  *  list    - GET /articles/
  *  create  - POST /articles/
- *  read    - GET /articles/{id}/
- *  update  - PUT /articles/{id}/
- *  delete  - DELETE /articles/{id}/
+ *  read    - GET /articles/{_id}/
+ *  update  - PUT /articles/{_id}/
+ *  delete  - DELETE /articles/{_id}/
  */
 app.use('/articles', mongooseCrudify({
   Model: Article,
@@ -27,7 +27,7 @@ app.use('/articles', mongooseCrudify({
       middlewares: [ensureLogin],
       except: ['list', 'read']
     }
-  ],
+  ]
 }))
 ```
 
@@ -37,18 +37,31 @@ var mongooseCrudify = require('mongoose-crudify')
 var Article = require('../app/models/article')
 
 app.use('/articles', mongooseCrudify({
-  Model: Article, // mongoose model, required
-  identifyingKey: '_id', // route param name, defaults to '_id'
-  selectFields: 'pub1 pub2 -secret', // http://mongoosejs.com/docs/api.html#query_Query-select
+  // mongoose model, required
+  Model: Article, 
+  // route param name, defaults to '_id'
+  identifyingKey: '_id', 
+  // http://mongoosejs.com/docs/api.html#query_Query-select
+  selectFields: '-secret', 
+  overrrideAction: {
+    /**
+     * overrrideAction: ['read','delete'], default handlers 
+     * for read and delete wont be attached to router object.
+     * 
+     * keys of default actions: list, create, read, update,
+     * delete, deleteAll
+     **/
 
-  // reuse your existing express.Router() object
-  router: existingRouter
-
-  // load model on update and read actions, defaults to true
-  // store the found model instance in req, e.g: req.crudify.article
-  // if changed to false, you must override the update and read middlewares
-  // and manually set the properties {err, result, [article] (model specific)} on req.crudify
-  loadModel: true,
+    // override read
+    read: (req, res)=> {
+      res.json({some: 'doc'})
+    }
+  },
+  // sanitise req.body, prefix + to required field , others are optional
+  // errors found are sent to client in json
+  sanitiseBody: {
+    whitelistKeys: '+password +email dob'
+  },
   beforeActions: [
     {
       middlewares: [ensureLogin],
@@ -56,61 +69,48 @@ app.use('/articles', mongooseCrudify({
     }
   ],
   afterActions: [
+    //{err,payload} available in req.crudify
     {
-      middlewares: [updateViewCount],
+      middlewares: [updateViewCount, hideFields],
       only: ['read']
     }
   ],
-
-  // change to false so that you can modify and end response in after actions
-  endResponseInAction: true,
-  actions: {
-    // default actions: list, create, read, update, delete
-    // any non-overridden action will be in functional
-    // store query result or err in req.crudify
-    // auto calling next() if after actions defined for this action
-
-    // override read
-    read: ({crudify}, res) => {
-      res.json(crudify.article)
-    }
-  },
-  afterActions: [
-    {
-      middlewares: [updateViewCount, modifyQueryResult],
-      only: ['read']
-    },
-    {
-      middlewares: [generalResponder],
-      except: ['read']
-    }
-  ],
-  options: {
+  expressOptions: {
     // https://expressjs.com/en/api.html#express.router
-    // if no existing router passed in, new one will be created with these options
-    // all default to false
+    // express.router instance will be created with these options
     caseSensitive: false,
     mergeParams: false,
     strict: false
   }
 }))
+
 function ensureLogin (req, res, next) {
   if (req.get('X-USERNAME') !== 'ryo') {
     return res.sendStatus(401)
   }
   next()
 }
-function updateViewCount (req, res) {
-  let article = req.crudify.article // or req.crudify.result
-  article.likes++
+function updateViewCount (req, res, next) {
+  const {error, payload} = req.crudify
+
+  if(error){
+    return res.json({error: 'woops'})
+  }
+
+  let article = payload
+  article.views++
   article.save()
+
+  next()
 }
-function modifyQueryResult (req, res) {
-  let article = req.crudify.result
-  article.title = 'new title'
-  res.json(article)
-}
-function generalResponder(req, res){
-  res.json(req.crudify.err || req.crudify.result)
+function hideFields (req, res) {
+  const {error, payload} = req.crudify
+
+  let article = payload.toObject()
+  delete article.secret
+
+  res.json({
+    article
+  })
 }
 ```
