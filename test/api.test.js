@@ -25,7 +25,7 @@ describe('generated api for Article', () => {
     const { error, payload } = body
 
     expect(status).toBe(200)
-    expect(error).toBe(undefined)
+    expect(error).toBeFalsy()
     expect(payload).toEqual([])
     done()
   })
@@ -44,9 +44,20 @@ describe('generated api for Article', () => {
     const { error, payload } = body
 
     expect(status).toBe(200)
-    expect(error).toBe(undefined)
+    expect(error).toBeFalsy()
     expect(payload._id).toBeDefined()
     id = payload._id
+    done()
+  })
+  it('should return error when required key defined in whitelist', async (done) => {
+    const { status, body } = await request.post('/articles')
+      .set('X-USERNAME', 'ryo')
+      .send({ what: 'title1' })
+    const { error, payload } = body
+
+    expect(status).toBe(200)
+    expect(error).toBeTruthy()
+    expect(payload).toBeFalsy()
     done()
   })
   it('should get article with id', async (done) => {
@@ -55,9 +66,18 @@ describe('generated api for Article', () => {
     const { error, payload } = body
 
     expect(status).toBe(200)
-    expect(error).toBe(undefined)
+    expect(error).toBeFalsy()
     expect(payload._id).toBe(id)
     expect(payload.views).toBe(1)
+    done()
+  })
+  it('should throw error when read nonexisting doc', async (done) => {
+    const { status, body } = await request.get('/articles/asdf')
+    const { error, payload } = body
+
+    expect(status).toBe(200)
+    expect(error).toBeTruthy()
+    expect(payload).toBeFalsy()
     done()
   })
 
@@ -67,7 +87,7 @@ describe('generated api for Article', () => {
     const { error, payload } = body
 
     expect(status).toBe(200)
-    expect(error).toBe(undefined)
+    expect(error).toBeFalsy()
     expect(payload.views).toBe(2)
     expect(payload.secret).toBe(undefined)
     done()
@@ -78,33 +98,62 @@ describe('generated api for Article', () => {
     const { error, payload } = body
 
     expect(status).toBe(200)
-    expect(error).toBe(undefined)
+    expect(error).toBeFalsy()
     expect(payload.length).toBe(1)
     done()
   })
 
-  it('should update article', (done) => {
-    Article.findOne({}, async (err, doc) => {
-      if (err) throw err
-      const { status, body } = await request.put('/articles/' + doc._id)
-        .set('X-USERNAME', 'ryo')
-        .send({ title: 'changed' })
-      const { error, payload } = body
+  it('should update article', async (done) => {
+    const { status, body } = await request.put('/articles/' + id)
+      .set('X-USERNAME', 'ryo')
+      .send({ title: 'changed' })
+    const { error, payload } = body
 
-      expect(status).toBe(200)
-      expect(error).toBe(undefined)
+    expect(status).toBe(200)
+    expect(error).toBeFalsy()
+    Article.findById(id, (err, doc) => {
+      if (err) throw err
       expect(payload.title).toBe('changed')
       done()
     })
   })
-  it('should delete article', (done) => {
-    Article.findOne({}, async (err, doc) => {
-      if (err) throw err
-      const { status, body } = await request.delete('/articles/' + doc._id)
-        .set('X-USERNAME', 'ryo')
+  it('should not update properties whose keys are not in whitelist', async (done) => {
+    const { status, body } = await request.put('/articles/' + id)
+      .set('X-USERNAME', 'ryo')
+      .send({ title: 'hey!', anotherProp: '!@#!#!@#' })
+    const { error, payload } = body
 
-      expect(status).toBe(200)
-      expect(body).toEqual({})
+    expect(status).toBe(200)
+    expect(error).toBeFalsy()
+    Article.findById(id, (err, doc) => {
+      if (err) throw err
+      expect(payload.title).toBe('hey!')
+      expect(payload.anotherProp).toBe(undefined)
+      done()
+    })
+  })
+
+  it('should delete article', async (done) => {
+    const { status, body } = await request.delete('/articles/' + id)
+      .set('X-USERNAME', 'ryo')
+
+    expect(status).toBe(200)
+    expect(body).toEqual({})
+    Article.findById(id, (err, doc) => {
+      if (err) throw err
+      expect(doc).toBeNull()
+      done()
+    })
+  })
+  it('should delete all article', async (done) => {
+    const { status, body } = await request.delete('/articles/')
+      .set('X-USERNAME', 'ryo')
+
+    expect(status).toBe(200)
+    expect(body).toEqual({})
+    Article.find({}, (err, docs) => {
+      if (err) throw err
+      expect(docs).toEqual([])
       done()
     })
   })
@@ -113,7 +162,7 @@ describe('generated api for Article', () => {
     const { error, payload } = body
 
     expect(status).toBe(200)
-    expect(error).toBe(undefined)
+    expect(error).toBeFalsy()
     expect(payload.length).toBe(0)
     done()
   })
@@ -123,6 +172,9 @@ function runServer () {
   app.use('/articles', crudify({
     Model: Article,
     identifyingKey: '_id',
+    sanitiseBody: {
+      whitelistKeys: '+title'
+    },
     beforeActions: [
       {
         middlewares: [ensureLogin],

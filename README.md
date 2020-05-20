@@ -4,13 +4,13 @@ Generates crud routes for mongoose model
 
 ## Install
 ```bash
-$ npm i -S mongoose-crudify
+$ npm i mongoose-crudify
 ```
 
 ## Example
 ```js
-var mongooseCrudify = require('mongoose-crudify')
-var Article = require('../app/models/article')
+const mongooseCrudify = require('mongoose-crudify')
+const Article = require('../app/models/article')
 
 /**
  * By default, following routes are generated
@@ -19,6 +19,7 @@ var Article = require('../app/models/article')
  *  read    - GET /articles/{_id}/
  *  update  - PUT /articles/{_id}/
  *  delete  - DELETE /articles/{_id}/
+ *  deleteAll  - DELETE /articles/
  */
 app.use('/articles', mongooseCrudify({
   Model: Article,
@@ -33,8 +34,8 @@ app.use('/articles', mongooseCrudify({
 
 ## Available options
 ```js
-var mongooseCrudify = require('mongoose-crudify')
-var Article = require('../app/models/article')
+const mongooseCrudify = require('mongoose-crudify')
+const Article = require('../app/models/article')
 
 app.use('/articles', mongooseCrudify({
   // mongoose model, required
@@ -57,10 +58,13 @@ app.use('/articles', mongooseCrudify({
       res.json({some: 'doc'})
     }
   },
-  // sanitise req.body, prefix + to required field , others are optional
-  // errors found are sent to client in json
+  /**
+   * sanitise req.body, prefix + to required field , others are optional.
+   * only these keys will be saved
+   * errors found are sent to client in json
+   * */
   sanitiseBody: {
-    whitelistKeys: '+password +email dob'
+    whitelistKeys: '+title'
   },
   beforeActions: [
     {
@@ -69,7 +73,7 @@ app.use('/articles', mongooseCrudify({
     }
   ],
   afterActions: [
-    //{err,payload} available in req.crudify
+    //{error,payload} available in req.crudify
     {
       middlewares: [updateViewCount, hideFields],
       only: ['read']

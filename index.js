@@ -5,7 +5,6 @@ function crudify (options = {}) {
   const defaultOptions = {
     Model: null,
     identifyingKey: '_id',
-    handleResultFor: [],
     overrrideAction: [],
     selectFields: null,
     sanitiseBody: null,
@@ -122,7 +121,7 @@ crudify.sanitiseObj = function (obj, keys, options) {
   }
 }
 
-crudify.getDefaultActions = ({ Model, identifyingKey, selectFields, handleResultFor, sanitiseBody }, hooks) => {
+crudify.getDefaultActions = ({ Model, identifyingKey, selectFields, sanitiseBody }, hooks) => {
   /** actions
    * {
    *    [error | payload]
@@ -132,30 +131,30 @@ crudify.getDefaultActions = ({ Model, identifyingKey, selectFields, handleResult
     /** GET / - List all entities */
     list: (req, res, next) => {
       const actionName = 'list'
-      const passControl = handleResultFor.includes(actionName) || hooks.after[actionName].length > 0
+      const passControl = hooks.after[actionName].length > 0
 
       const conditions = Object.assign({}, req.params, req.query)
-      Model.find(conditions, selectFields, (err, docs) => {
+      Model.find(conditions, selectFields, (error, payload) => {
         if (passControl) {
           utils.addObjToReq(req, 'crudify', {
-            err,
-            payload: docs
+            error,
+            payload
           })
           return next()
         }
 
-        if (err) {
-          return res.json({ err })
+        if (error) {
+          return res.json({ error })
         }
 
-        res.json({ payload: docs })
+        res.json({ payload })
       })
     },
 
     /** POST / - Create a new entity */
     create: (req, res, next) => {
       const actionName = 'create'
-      const passControl = handleResultFor.includes(actionName) || hooks.after[actionName].length > 0
+      const passControl = hooks.after[actionName].length > 0
 
       let reqBody = req.body
       if (sanitiseBody && sanitiseBody.whitelistKeys) {
@@ -170,53 +169,53 @@ crudify.getDefaultActions = ({ Model, identifyingKey, selectFields, handleResult
       }
 
       const newDoc = new Model(reqBody)
-      newDoc.save(function (err, doc) {
+      newDoc.save(function (error, payload) {
         if (passControl) {
           utils.addObjToReq(req, 'crudify', {
-            err,
-            payload: doc
+            error,
+            payload
           })
           return next()
         }
 
-        if (err) {
-          return res.json({ err })
+        if (error) {
+          return res.json({ error })
         }
 
-        res.json({ payload: doc })
+        res.json({ payload })
       })
     },
 
     /** GET /:id - Return a given entity */
     read: (req, res, next) => {
       const actionName = 'read'
-      const passControl = handleResultFor.includes(actionName) || hooks.after[actionName].length > 0
+      const passControl = hooks.after[actionName].length > 0
 
       const id = req.params[identifyingKey]
-      Model.findById(id, selectFields, (err, doc) => {
+      Model.findById(id, selectFields, (error, payload) => {
         if (passControl) {
           utils.addObjToReq(req, 'crudify', {
-            err,
-            payload: doc
+            error,
+            payload
           })
           return next()
         }
 
-        if (err) {
-          return res.json({ err })
+        if (error) {
+          return res.json({ error })
         }
 
-        res.json({ payload: doc })
+        res.json({ payload })
       })
     },
 
     /** PUT /:id - Update a given entity */
     update: (req, res, next) => {
       const actionName = 'update'
-      const passControl = handleResultFor.includes(actionName) || hooks.after[actionName].length > 0
+      const passControl = hooks.after[actionName].length > 0
 
       let reqBody = req.body
-      if (sanitiseBody) {
+      if (sanitiseBody && sanitiseBody.whitelistKeys) {
         const sanitised = crudify.sanitiseObj(req.body, sanitiseBody.whitelistKeys)
 
         if (sanitised.hasError) {
@@ -224,46 +223,47 @@ crudify.getDefaultActions = ({ Model, identifyingKey, selectFields, handleResult
             error: sanitised.errors
           })
         }
-        reqBody = sanitised
+        reqBody = sanitised.sanitisedObj
       }
 
       const id = req.params[identifyingKey]
-      Model.findById(id, function (err, doc) {
-        if (err) {
+      Model.findById(id, function (error, payload) {
+        if (error) {
           if (passControl) {
             utils.addObjToReq(req, 'crudify', {
-              err
+              error
             })
             return next()
           }
-          return res.json({ err })
+          return res.json({ error })
         }
-        if (!doc) {
+        if (!payload) {
           if (passControl) {
             utils.addObjToReq(req, 'crudify', {
-              err,
-              payload: doc
+              error,
+              payload
             })
             return next()
           }
-          return res.json({ payload: doc })
+          return res.json({ payload })
         }
 
+        const doc = payload
         Object.assign(doc, reqBody)
-        doc.save(function (err, doc) {
+        doc.save(function (error, payload) {
           if (passControl) {
             utils.addObjToReq(req, 'crudify', {
-              err,
-              payload: doc
+              error,
+              payload
             })
             return next()
           }
 
-          if (err) {
-            return res.json({ err })
+          if (error) {
+            return res.json({ error })
           }
 
-          res.json({ payload: doc })
+          res.json({ payload })
         })
       })
     },
@@ -271,19 +271,19 @@ crudify.getDefaultActions = ({ Model, identifyingKey, selectFields, handleResult
     /** DELETE /:id - Delete a given entity */
     delete: (req, res, next) => {
       const actionName = 'delete'
-      const passControl = handleResultFor.includes(actionName) || hooks.after[actionName].length > 0
+      const passControl = hooks.after[actionName].length > 0
       const conditions = Object.assign({}, req.params, req.query)
 
-      Model.deleteOne(conditions, function (err) {
+      Model.deleteOne(conditions, function (error) {
         if (passControl) {
           utils.addObjToReq(req, 'crudify', {
-            err
+            error
           })
           return next()
         }
 
-        if (err) {
-          return res.json({ err })
+        if (error) {
+          return res.json({ error })
         }
 
         res.json({})
@@ -293,19 +293,19 @@ crudify.getDefaultActions = ({ Model, identifyingKey, selectFields, handleResult
     /** DELETE / - Delete all entity */
     deleteAll: (req, res, next) => {
       const actionName = 'deleteAll'
-      const passControl = handleResultFor.includes(actionName) || hooks.after[actionName].length > 0
+      const passControl = hooks.after[actionName].length > 0
       const conditions = Object.assign({}, req.params, req.query)
 
-      Model.deleteMany(conditions, function (err) {
+      Model.deleteMany(conditions, function (error) {
         if (passControl) {
           utils.addObjToReq(req, 'crudify', {
-            err
+            error
           })
           return next()
         }
 
-        if (err) {
-          return res.json({ err })
+        if (error) {
+          return res.json({ error })
         }
 
         res.json({})
